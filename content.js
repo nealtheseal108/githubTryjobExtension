@@ -1,76 +1,22 @@
 console.log("Running extension");
 
-(async() => {
-  const urlParts = window.location.pathname.split('/').filter(Boolean);
-
-  const owner = urlParts[0];
-  const repo = urlParts[1];
-
-  
-  async function fetchAllPRs(state = 'all') {
-      let prNumbers = [];
-      let page = 1;
-      const perPage = 30; // GitHub API default
-
-      while (true) {
-        const url = `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&page=${page}&per_page=${perPage}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-
-        const prs = await res.json();
-        if (prs.length === 0) break;  // no more PRs
-
-        prNumbers.push(...prs.map(pr => pr.number));
-        page++;
-      }
-
-      return prNumbers;
-    }
-    async function fetchCommitsForPR(prNumber) {
-      const url = `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/commits`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        console.warn(`PR #${prNumber} commits fetch failed with status ${res.status}`);
-        return null;
-      }
-      const commits = await res.json();
-      return commits.map(c => c.sha);
-    }
-
-      async function fetchAllCommits() {
-        try {
-          const prNumbers = await fetchAllPRs('open');  // 'open', 'closed', or 'all'
-          console.log(`Fetched ${prNumbers.length} PR numbers.`);
-
-          for (const prNumber of prNumbers) {
-            const shas = await fetchCommitsForPR(prNumber);
-            if (shas) {
-              console.log(`PR #${prNumber} commits:`, shas);
-            }
-          }
-        } catch (err) {
-          console.error('Error:', err);
-        }
-      }
-
-    fetchAllCommits();
-
+function injectButton() {
   const tryjobs = document.querySelector('.d-flex.flex-justify-between.mb-md-3');
 
   if (!tryjobs || document.querySelector('#tryjobs')) return;
 
-  const tryjobAction = document.createElement('button');
-  tryjobAction.id = 'tryjobs';
-  tryjobAction.setAttribute('type', 'button');
-  tryjobAction.setAttribute('aria-haspopup', 'true');
-  tryjobAction.setAttribute('aria-expanded', 'false');
-  tryjobAction.setAttribute('tabindex', '0');
-  tryjobAction.setAttribute('data-loading', 'false');
-  tryjobAction.setAttribute('data-size', 'medium');
-  tryjobAction.setAttribute('data-variant', 'primary');
-  tryjobAction.setAttribute('aria-describedby', ':myCustomId:');
-  tryjobAction.textContent = 'Tryjobs';
-  tryjobAction.style.cssText = `
+  const choose_button = document.createElement('button');
+  choose_button.id = 'tryjobs';
+  choose_button.setAttribute('type', 'button');
+  choose_button.setAttribute('aria-haspopup', 'true');
+  choose_button.setAttribute('aria-expanded', 'false');
+  choose_button.setAttribute('tabindex', '0');
+  choose_button.setAttribute('data-loading', 'false');
+  choose_button.setAttribute('data-size', 'medium');
+  choose_button.setAttribute('data-variant', 'primary');
+  choose_button.setAttribute('aria-describedby', ':myCustomId:');
+  choose_button.textContent = 'Tryjobs';
+  choose_button.style.cssText = `
     height: 32px;
     max-width: 114px;
     padding: 5px 16px;
@@ -91,15 +37,15 @@ console.log("Running extension");
     box-sizing: border-box;
     margin-left: 12px; 
   `;
-  tryjobAction.onmouseover = () => {
-    tryjobAction.style.backgroundColor = "#2da44e";
+  choose_button.onmouseover = () => {
+    choose_button.style.backgroundColor = "#2da44e";
   };
 
-  tryjobAction.onmouseout = () => {
-    tryjobAction.style.backgroundColor = "#2c974b";
+  choose_button.onmouseout = () => {
+    choose_button.style.backgroundColor = "#2c974b";
   };
 
-  tryjobAction.addEventListener('click', () => {
+  choose_button.addEventListener('click', () => {
       // --- Create overlay ---
       const overlay = document.createElement('div');
       overlay.id = 'popup-overlay';
@@ -183,6 +129,8 @@ console.log("Running extension");
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            changeNumber: changeNumber,
+            patchSet: patchSet,
             tests: selected
           }),
         })
@@ -208,7 +156,7 @@ console.log("Running extension");
     });
 
 
-  tryjobs.appendChild(tryjobAction);
+  tryjobs.appendChild(choose_button);
 
   const style = document.createElement('style');
     style.textContent = `
@@ -223,7 +171,7 @@ console.log("Running extension");
         z-index: 9999;
       }
       #popup-modal {
-        background: black;
+        background: white;
         padding: 20px;
         border-radius: 8px;
         width: 300px;
@@ -256,4 +204,10 @@ console.log("Running extension");
       }
     `;
     document.head.appendChild(style);  
-})();
+}
+
+// GitHub uses dynamic page loading; use MutationObserver
+const observer = new MutationObserver(() => injectButton());
+observer.observe(document.body, { childList: true, subtree: true });
+
+injectButton();
