@@ -1,3 +1,5 @@
+console.js("Running extension");
+
 function injectButton() {
   const readme = document.querySelector('#readme');
 
