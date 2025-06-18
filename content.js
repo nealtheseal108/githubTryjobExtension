@@ -1,7 +1,7 @@
 console.log("Running extension");
 
 function injectButton() {
-  const tryjobs = document.querySelector('.OverviewContent-module__Box_6--wV7Tw');
+  const tryjobs = document.querySelector('.d-flex.flex-justify-between.mb-md-3');
 
   if (!tryjobs || document.querySelector('#tryjobs')) return;
 
@@ -15,9 +15,10 @@ function injectButton() {
   choose_button.setAttribute('data-size', 'medium');
   choose_button.setAttribute('data-variant', 'primary');
   choose_button.setAttribute('aria-describedby', ':myCustomId:');
-  choose_button.textContent = 'Tryjob Action';
+  choose_button.textContent = 'Tryjobs';
   choose_button.style.cssText = `
     height: 32px;
+    max-width: 114px;
     padding: 5px 16px;
     background-color: #2c974b;
     color: white;
@@ -30,6 +31,11 @@ function injectButton() {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+    margin-left: 12px; 
   `;
   choose_button.onmouseover = () => {
     choose_button.style.backgroundColor = "#2da44e";
@@ -151,7 +157,7 @@ function injectButton() {
 
 
   tryjobs.appendChild(choose_button);
-  
+
   const style = document.createElement('style');
     style.textContent = `
       #popup-overlay {
