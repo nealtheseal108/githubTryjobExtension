@@ -1,22 +1,155 @@
 console.log("Running extension");
 
-function injectButton() {
+(async() => {
+  
+      
+    //  assume we have isDryRunning,
+
+     
+     const isDryRunning=false;
+     // Assume tests is sorted by FAILURE, PENDING, SUCCESS
+     
+     const tests = [
+       {
+         "name":"SOMETESTNAMEF",
+         "status":"FAILURE"
+       },
+       {
+         "name":"SOMETESTNAMEP",
+         "status":"PENDING"
+       },
+       {
+         "name":"SOMETESTNAMES",
+         "status":"SUCCESS"
+       },
+       {
+         "name":"SOMETESTNAMES2",
+         "status":"SUCCESS"
+       }
+     ]
+
+      
+
+  const urlParts = window.location.pathname.split('/').filter(Boolean);
+
+
+  
+  const owner = urlParts[0];
+  const repo = urlParts[1];
+
+  
+  async function fetchAllPRs(state = 'all') {
+      let prNumbers = [];
+      let page = 1;
+      const perPage = 30; // GitHub API default
+
+      while (true) {
+        const url = `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&page=${page}&per_page=${perPage}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+
+        const prs = await res.json();
+        if (prs.length === 0) break;  // no more PRs
+
+        prNumbers.push(...prs.map(pr => pr.number));
+        page++;
+      }
+
+      return prNumbers;
+    }
+    async function fetchCommitsForPR(prNumber) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/commits`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.warn(`PR #${prNumber} commits fetch failed with status ${res.status}`);
+        return null;
+      }
+      const commits = await res.json();
+      return commits.map(c => c.sha);
+    }
+
+      async function fetchAllCommits() {
+        try {
+          const prNumbers = await fetchAllPRs('open');  // 'open', 'closed', or 'all'
+          console.log(`Fetched ${prNumbers.length} PR numbers.`);
+
+          for (const prNumber of prNumbers) {
+            const shas = await fetchCommitsForPR(prNumber);
+            if (shas) {
+              console.log(`PR #${prNumber} commits:`, shas);
+                   shas.forEach((commitId) => {
+                    console.log(commitId);
+                    fetch(`https://bryans-mac-mini.taila3b14e.ts.net/run-status?commitId=${commitId}?prNumber=${prNumber}`, {
+                      method: 'GET',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      }
+                    }).then(response => response.json())
+                    .then(data => {
+                      tests = data.map(obj => {
+                          if (obj.FAILURE && obj.FAILURE > 0) {
+                              return {
+                                  "name": obj.testName,
+                                  "status": "FAILURE"
+                              }
+                          }
+                          if (obj.PENDING && obj.PENDING > 0) {
+                              return {
+                                  "name": obj.testName,
+                                  "status": "PENDING"
+                              }
+                          }
+                          if (obj.SUCCESS && obj.SUCCESS > 0) {
+                              return {
+                                  "name": obj.testName,
+                                  "status": "SUCCESS"
+                              }
+                          } else {
+                              return {
+                                  "testName": obj.testName,
+                                  "status": "PENDING"
+                              }
+                          }
+                      }).sort((a, b) => a.status - b.status)})
+            })
+          }
+        }} catch (err) {
+          console.error('Error:', err);
+        }
+      }
+
+      const test_counts = {
+      "PENDING": 0,
+      "SUCCESS": 0,
+      "FAILURE": 0
+      }
+      for (t of tests) {
+          test_counts[t.status] += 1
+      }
+      
+         console.log(tests)
+         console.log(test_counts)
+
+    fetchAllCommits();
+
+  
+
   const tryjobs = document.querySelector('.d-flex.flex-justify-between.mb-md-3');
 
   if (!tryjobs || document.querySelector('#tryjobs')) return;
 
-  const choose_button = document.createElement('button');
-  choose_button.id = 'tryjobs';
-  choose_button.setAttribute('type', 'button');
-  choose_button.setAttribute('aria-haspopup', 'true');
-  choose_button.setAttribute('aria-expanded', 'false');
-  choose_button.setAttribute('tabindex', '0');
-  choose_button.setAttribute('data-loading', 'false');
-  choose_button.setAttribute('data-size', 'medium');
-  choose_button.setAttribute('data-variant', 'primary');
-  choose_button.setAttribute('aria-describedby', ':myCustomId:');
-  choose_button.textContent = 'Tryjobs';
-  choose_button.style.cssText = `
+  const tryjobAction = document.createElement('button');
+  tryjobAction.id = 'tryjobs';
+  tryjobAction.setAttribute('type', 'button');
+  tryjobAction.setAttribute('aria-haspopup', 'true');
+  tryjobAction.setAttribute('aria-expanded', 'false');
+  tryjobAction.setAttribute('tabindex', '0');
+  tryjobAction.setAttribute('data-loading', 'false');
+  tryjobAction.setAttribute('data-size', 'medium');
+  tryjobAction.setAttribute('data-variant', 'primary');
+  tryjobAction.setAttribute('aria-describedby', ':myCustomId:');
+  tryjobAction.textContent = 'Tryjobs';
+  tryjobAction.style.cssText = `
     height: 32px;
     max-width: 114px;
     padding: 5px 16px;
@@ -37,15 +170,15 @@ function injectButton() {
     box-sizing: border-box;
     margin-left: 12px; 
   `;
-  choose_button.onmouseover = () => {
-    choose_button.style.backgroundColor = "#2da44e";
+  tryjobAction.onmouseover = () => {
+    tryjobAction.style.backgroundColor = "#2da44e";
   };
 
-  choose_button.onmouseout = () => {
-    choose_button.style.backgroundColor = "#2c974b";
+  tryjobAction.onmouseout = () => {
+    tryjobAction.style.backgroundColor = "#2c974b";
   };
 
-  choose_button.addEventListener('click', () => {
+  tryjobAction.addEventListener('click', () => {
       // --- Create overlay ---
       const overlay = document.createElement('div');
       overlay.id = 'popup-overlay';
@@ -89,6 +222,7 @@ function injectButton() {
         })
         .then(data => {
           data.forEach((test) => {
+            console.log("hello");
             const label = document.createElement('label');
             label.style.display = 'block'; // Required for filtering
             const checkbox = document.createElement('input');
@@ -122,15 +256,14 @@ function injectButton() {
         const selected = Array.from(form.querySelectorAll('input[type="checkbox"]:checked'))
                               .map(cb => cb.name);
         console.log('Selected jobs:', selected);
-        // Send jobs
+        
+        
         fetch('https://bryans-mac-mini.taila3b14e.ts.net/run', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            changeNumber: changeNumber,
-            patchSet: patchSet,
             tests: selected
           }),
         })
@@ -156,7 +289,7 @@ function injectButton() {
     });
 
 
-  tryjobs.appendChild(choose_button);
+  tryjobs.appendChild(tryjobAction);
 
   const style = document.createElement('style');
     style.textContent = `
@@ -171,7 +304,7 @@ function injectButton() {
         z-index: 9999;
       }
       #popup-modal {
-        background: white;
+        background: black;
         padding: 20px;
         border-radius: 8px;
         width: 300px;
@@ -204,10 +337,4 @@ function injectButton() {
       }
     `;
     document.head.appendChild(style);  
-}
-
-// GitHub uses dynamic page loading; use MutationObserver
-const observer = new MutationObserver(() => injectButton());
-observer.observe(document.body, { childList: true, subtree: true });
-
-injectButton();
+})();
