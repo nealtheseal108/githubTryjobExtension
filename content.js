@@ -118,24 +118,34 @@ function injectButton() {
       submitBtn.id = 'submit-popup';
       submitBtn.textContent = 'Submit';
       submitBtn.type = 'button';
+      // Extract PR number from the URL (e.g., /pull/37 → "37")
       submitBtn.addEventListener('click', () => {
-        const selected = Array.from(form.querySelectorAll('input[type="checkbox"]:checked'))
-                              .map(cb => cb.name);
-        console.log('Selected jobs:', selected);
-        // Send jobs
-        fetch('https://bryans-mac-mini.taila3b14e.ts.net/run', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            changeNumber: changeNumber,
-            patchSet: patchSet,
-            tests: selected
-          }),
-        })
-        overlay.remove();
+        const urlParts = window.location.pathname.split('/');
+        const changeNumber = urlParts.includes("pull") ? urlParts[urlParts.indexOf("pull") + 1] : "0";
+      const selected = Array.from(form.querySelectorAll('input[type="checkbox"]:checked'))
+                            .map(cb => cb.name);
+      console.log('Selected jobs:', selected);
+
+      // Extract commit SHA from the page
+      const commitID = document.querySelector('clipboard-copy')?.getAttribute('value') || '';
+      const branch = 'main'; // use dynamic logic if needed
+      const prNumber = changeNumber;
+
+      fetch('https://bryans-mac-mini.taila3b14e.ts.net/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          commitID: commitID,
+          branch: branch,
+          prNumber: prNumber,
+          tests: selected
+        }),
       });
+
+      overlay.remove();
+    });
 
       // Add buttons and assemble modal
       const buttonRow = document.createElement('div');
@@ -160,49 +170,50 @@ function injectButton() {
 
   const style = document.createElement('style');
     style.textContent = `
-      #popup-overlay {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100vw; height: 100vh;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-      }
-      #popup-modal {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        width: 300px;
-        position: relative;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-        font-family: sans-serif;
-      }
-      #submit-popup, #cancel-popup {
-        padding: 6px 12px;
-        background-color: #ccc;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      #submit-popup {
-        background-color: #3272c1;
-        color: white;
-      }
-      #submit-popup:hover {
-        background-color: #255794;
-      }
-      #cancel-popup:hover {
-        background-color: #bbb;
-      }
-      #popup-modal h2 {
-        margin-top: 0;
-      }
-      hr {
-        margin: 10px 0px 10px 0px;
-      }
-    `;
+    #popup-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background-color: rgba(0, 0, 0, 0.5); /* translucent black overlay */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    #popup-modal {
+      background-color: #ffffff; /* bright white modal */
+      padding: 20px;
+      border-radius: 8px;
+      width: 300px;
+      position: relative;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      font-family: sans-serif;
+      color: #24292f; /* GitHub-style text color */
+    }
+    #submit-popup, #cancel-popup {
+      padding: 6px 12px;
+      background-color: #ccc;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #submit-popup {
+      background-color: #3272c1;
+      color: white;
+    }
+    #submit-popup:hover {
+      background-color: #255794;
+    }
+    #cancel-popup:hover {
+      background-color: #bbb;
+    }
+    #popup-modal h2 {
+      margin-top: 0;
+    }
+    hr {
+      margin: 10px 0px 10px 0px;
+    }
+  `;
     document.head.appendChild(style);  
 }
 
