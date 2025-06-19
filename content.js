@@ -97,6 +97,7 @@ waitForMergeFooter((footer) => {
     submitBtn.addEventListener('click', () => {
       const urlParts = window.location.pathname.split('/');
       const prNumber = urlParts.includes("pull") ? urlParts[urlParts.indexOf("pull") + 1] : "0";
+      const patchNumber = 1;
 
       const selected = Array.from(
         form.querySelectorAll('input[type="checkbox"]:checked')
@@ -114,14 +115,39 @@ waitForMergeFooter((footer) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          commitID: commitID,
-          branch: branch,
-          prNumber: prNumber,
+          commitID,
+          branch,
+          prNumber,
           tests: selected
         }),
       }).then(res => {
         if (!res.ok) throw new Error(`Run API failed: ${res.status}`);
-        alert("✅ Tests triggered successfully.");
+        console.log("✅ Test run triggered");
+
+        // Start polling run-status
+        let pollInterval = setInterval(() => {
+          fetch(`https://bryans-mac-mini.taila3b14e.ts.net/run-status?changeNumber=${prNumber}&patchNumber=${patchNumber}`)
+            .then(res => res.json())
+            .then(results => {
+              if (!Array.isArray(results)) throw new Error("Invalid status payload");
+
+              const done = results.filter(r => r.status === 'PASSED' || r.status === 'FAILED');
+              const allDone = done.length === selected.length;
+
+              const passed = results.filter(r => r.status === 'PASSED').length;
+
+              console.log(`Progress: ${done.length}/${selected.length}`);
+
+              if (allDone) {
+                clearInterval(pollInterval);
+                alert(`✅ ${passed}/${selected.length} tests passed`);
+              }
+            })
+            .catch(err => {
+              console.error("Polling error:", err);
+              clearInterval(pollInterval);
+            });
+        }, 2000);
       }).catch(err => {
         console.error(err);
         alert("❌ Failed to trigger tests.");
@@ -129,6 +155,7 @@ waitForMergeFooter((footer) => {
 
       overlay.remove();
     });
+
 
     const buttonRow = document.createElement('div');
     buttonRow.style.display = 'flex';
