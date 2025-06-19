@@ -104,52 +104,60 @@ waitForMergeFooter((footer) => {
       ).map(cb => cb.name);
 
       const commitID = document.querySelector('clipboard-copy')?.getAttribute('value') || '';
-      const branchElement = document.querySelector('[data-testid="base-branch-select-menu"] summary');
-      const branch = branchElement?.textContent?.trim() || 'main';
+      const branch = 'main';
 
-      console.log('POSTING TRYJOBS:', { commitID, prNumber, branch, selected });
+      console.log('▶️ Triggering run:', { commitID, prNumber, branch, selected });
+
+      // --- Create and insert spinner ---
+      const spinner = document.createElement('div');
+      spinner.textContent = '⏳ Running tests...';
+      spinner.style.position = 'fixed';
+      spinner.style.bottom = '20px';
+      spinner.style.right = '20px';
+      spinner.style.background = '#24292f';
+      spinner.style.color = 'white';
+      spinner.style.padding = '12px 20px';
+      spinner.style.borderRadius = '8px';
+      spinner.style.zIndex = 10000;
+      document.body.appendChild(spinner);
 
       fetch('https://bryans-mac-mini.taila3b14e.ts.net/run', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          commitID,
-          branch,
-          prNumber,
-          tests: selected
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commitID, branch, prNumber, tests: selected }),
       }).then(res => {
         if (!res.ok) throw new Error(`Run API failed: ${res.status}`);
-        console.log("✅ Test run triggered");
 
-        // Start polling run-status
+        // --- Start polling run-status ---
         let pollInterval = setInterval(() => {
           fetch(`https://bryans-mac-mini.taila3b14e.ts.net/run-status?changeNumber=${prNumber}&patchNumber=${patchNumber}`)
             .then(res => res.json())
             .then(results => {
-              if (!Array.isArray(results)) throw new Error("Invalid status payload");
+              console.log("🔁 Fetched run status:", results);
+
+              if (!Array.isArray(results) || results.length === 0) return;
 
               const done = results.filter(r => r.status === 'PASSED' || r.status === 'FAILED');
-              const allDone = done.length === selected.length;
-
               const passed = results.filter(r => r.status === 'PASSED').length;
 
-              console.log(`Progress: ${done.length}/${selected.length}`);
+              spinner.textContent = `🧪 ${done.length}/${selected.length} completed...`;
 
-              if (allDone) {
+              if (done.length === selected.length) {
                 clearInterval(pollInterval);
+                spinner.remove();
                 alert(`✅ ${passed}/${selected.length} tests passed`);
               }
             })
             .catch(err => {
               console.error("Polling error:", err);
               clearInterval(pollInterval);
+              spinner.remove();
+              alert("❌ Failed to fetch run status.");
             });
         }, 2000);
       }).catch(err => {
-        console.error(err);
+        console.error("POST error:", err);
+        spinner.remove();
         alert("❌ Failed to trigger tests.");
       });
 
