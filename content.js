@@ -156,8 +156,8 @@ waitForMergeFooter((footer) => {
           const eventSource = new EventSource(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`);
 
           eventSource.onmessage = (event) => {
-            console.log(event.data);
             const update = JSON.parse(event.data);
+            console.log(update);
             const li = document.createElement('li');
             li.textContent = `✔ ${update.testName} → ${update.status}`;
             updateList.appendChild(li);
