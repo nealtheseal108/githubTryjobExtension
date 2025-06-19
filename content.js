@@ -5,7 +5,9 @@ console.log("Running extension");
 function waitForMergeFooter(callback) {
   const check = () => {
     // Targeting the PR footer element
-    const footer = document.querySelector('.p-3.bgColor-muted.borderColor-muted.rounded-bottom-2');
+    const footer = document.querySelector(
+      ".p-3.bgColor-muted.borderColor-muted.rounded-bottom-2"
+    );
     if (footer) {
       callback(footer); // Call your UI injection function
     } else {
@@ -17,208 +19,208 @@ function waitForMergeFooter(callback) {
 
 waitForMergeFooter((footer) => {
   // Prevent adding the button multiple times
-  if (document.querySelector('#tryjobs')) return;
+  if (document.querySelector("#tryjobs")) return;
 
   // Style the footer so it can fit your custom button
-  footer.style.display = 'flex';
-  footer.style.flexWrap = 'wrap';
-  footer.style.alignItems = 'center';
-  footer.style.justifyContent = 'flex-start';
-  footer.style.gap = '8px';
+  footer.style.display = "flex";
+  footer.style.flexWrap = "wrap";
+  footer.style.alignItems = "center";
+  footer.style.justifyContent = "flex-start";
+  footer.style.gap = "8px";
 
   // Create the green "Tryjobs" button
-  const button = document.createElement('button');
-  button.id = 'tryjobs';
-  button.textContent = 'Tryjobs';
-  button.className = 'btn btn-sm';
-  button.style.backgroundColor = '#2da44e';
-  button.style.color = 'white';
-  button.style.border = 'none';
-  button.style.borderRadius = '6px';
-  button.style.padding = '5px 16px';
-  button.style.cursor = 'pointer';
+  const button = document.createElement("button");
+  button.id = "tryjobs";
+  button.textContent = "Tryjobs";
+  button.className = "btn btn-sm";
+  button.style.backgroundColor = "#2da44e";
+  button.style.color = "white";
+  button.style.border = "none";
+  button.style.borderRadius = "6px";
+  button.style.padding = "5px 16px";
+  button.style.cursor = "pointer";
 
   // Button click handler — opens modal
-  button.addEventListener('click', () => {
+  button.addEventListener("click", () => {
     // Create the dark overlay
-    const overlay = document.createElement('div');
-    overlay.id = 'popup-overlay';
+    const overlay = document.createElement("div");
+    overlay.id = "popup-overlay";
 
     // Create the white modal box
-    const modal = document.createElement('div');
-    modal.id = 'popup-modal';
+    const modal = document.createElement("div");
+    modal.id = "popup-modal";
 
     // Modal title
-    const title = document.createElement('h2');
-    title.textContent = 'Choose Tryjobs';
+    const title = document.createElement("h2");
+    title.textContent = "Choose Tryjobs";
 
     // The form to hold checkboxes
-    const form = document.createElement('form');
+    const form = document.createElement("form");
 
     // Search box to filter tryjobs
-    const searchInput = document.createElement('input');
-    searchInput.type = 'text';
-    searchInput.placeholder = 'Filter tryjobs...';
-    searchInput.style.marginBottom = '10px';
-    searchInput.style.width = '100%';
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.placeholder = "Filter tryjobs...";
+    searchInput.style.marginBottom = "10px";
+    searchInput.style.width = "100%";
 
     const labelList = []; // Track labels for filtering
 
     // Filter labels when user types
-    searchInput.addEventListener('input', () => {
+    searchInput.addEventListener("input", () => {
       const query = searchInput.value.toLowerCase();
       labelList.forEach(({ label, test }) => {
-        label.style.display = test.toLowerCase().includes(query) ? 'block' : 'none';
+        label.style.display = test.toLowerCase().includes(query)
+          ? "block"
+          : "none";
       });
     });
 
     // Fetch available tryjob names from backend
-    fetch('https://bryans-mac-mini.taila3b14e.ts.net/test-names')
-      .then(response => {
+    fetch("https://bryans-mac-mini.taila3b14e.ts.net/test-names")
+      .then((response) => {
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         return response.json();
       })
-      .then(data => {
+      .then((data) => {
         data.forEach((test) => {
           // Create checkbox for each test
-          const label = document.createElement('label');
-          label.style.display = 'block';
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
+          const label = document.createElement("label");
+          label.style.display = "block";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
           checkbox.name = test;
-          checkbox.class = 'testBoxes';
+          checkbox.class = "testBoxes";
           label.appendChild(checkbox);
           label.append(` ${test}`);
           form.appendChild(label);
           labelList.push({ label, test });
         });
       })
-      .catch(error => console.error('Fetch error:', error));
+      .catch((error) => console.error("Fetch error:", error));
 
     // Cancel button
-    const cancelBtn = document.createElement('button');
-    cancelBtn.id = 'cancel-popup';
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.type = 'button';
-    cancelBtn.addEventListener('click', () => {
+    const cancelBtn = document.createElement("button");
+    cancelBtn.id = "cancel-popup";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.type = "button";
+    cancelBtn.addEventListener("click", () => {
       overlay.remove(); // Close the modal
     });
 
-
     // Submit button
-    const submitBtn = document.createElement('button');
-    submitBtn.id = 'submit-popup';
-    submitBtn.textContent = 'Submit';
-    submitBtn.type = 'button';
-    submitBtn.addEventListener('click', () => {
+    const submitBtn = document.createElement("button");
+    submitBtn.id = "submit-popup";
+    submitBtn.textContent = "Submit";
+    submitBtn.type = "button";
+    submitBtn.addEventListener("click", () => {
       // Extract test selections
       const selected = Array.from(
         form.querySelectorAll('input[type="checkbox"]:checked')
-      ).map(cb => cb.name);
-
+      ).map((cb) => cb.name);
 
       // Hardcoded PR number, commit ID, and branch (this should be dynamic ideally)
-      const urlParts = window.location.pathname.split('/');
+      const urlParts = window.location.pathname.split("/");
       const prNumber = "37";
       const commitID = "548f60778f536aa8f5076558983df4e92545a396";
-      const branch = 'Sailloft';
+      const branch = "Sailloft";
 
-      console.log('▶️ Triggering run:', { commitID, prNumber, branch, selected });
+      console.log("▶️ Triggering run:", {
+        commitID,
+        prNumber,
+        branch,
+        selected,
+      });
 
       // Spinner while tests are running
-      const spinner = document.createElement('div');
-      spinner.textContent = '⏳ Running tests...';
-      spinner.style.position = 'fixed';
-      spinner.style.bottom = '20px';
-      spinner.style.right = '20px';
-      spinner.style.background = '#24292f';
-      spinner.style.color = 'white';
-      spinner.style.padding = '12px 20px';
-      spinner.style.borderRadius = '8px';
+      const spinner = document.createElement("div");
+      spinner.textContent = "⏳ Running tests...";
+      spinner.style.position = "fixed";
+      spinner.style.bottom = "20px";
+      spinner.style.right = "20px";
+      spinner.style.background = "#24292f";
+      spinner.style.color = "white";
+      spinner.style.padding = "12px 20px";
+      spinner.style.borderRadius = "8px";
       spinner.style.zIndex = 10000;
       document.body.appendChild(spinner);
 
       // Trigger backend to run tests
-      fetch('https://bryans-mac-mini.taila3b14e.ts.net/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("https://bryans-mac-mini.taila3b14e.ts.net/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ commitID, branch, prNumber, tests: selected }),
       })
         .then(() => {
           // UI for tracking test status
-          // UI for tracking test status
-          const statusText = document.createElement('p');
+          const statusText = document.createElement("p");
           let completed = 0;
           const total = selected.length;
           statusText.textContent = `🟡 Subscribed... 0/${total} complete`;
-          statusText.style.marginTop = '15px';
+          statusText.style.marginTop = "15px";
           modal.appendChild(statusText);
 
-          const updateList = document.createElement('ul');
+          const updateList = document.createElement("ul");
           modal.appendChild(updateList);
 
-          // ✅ Instantiate EventSource (this line was missing)
-          const eventSource = new EventSource(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`);
+          const eventSource = new EventSource(
+            `https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`
+          );
 
           // 📥 Handle incoming messages
 
-            const seenTests = new Set(); // Add this ABOVE eventSource.onmessage
+          const seenTests = new Set(); // Add this ABOVE eventSource.onmessage
 
-            eventSource.onmessage = (event) => {
-              console.log(event);
-              const update = JSON.parse(event.data);
-              console.log(update);
-              console.log(update.Records[0]);
-              console.log((update.Records[0]).dynamodb.NewImage.Status.S);
-              const testStatus = (update.Records[0]).dynamodb.NewImage.Status.S;
-              const testName = (update.Records[0]).dynamodb.NewImage.runId.S;
+          eventSource.onmessage = (event) => {
+            console.log(selected);
+            const update = JSON.parse(event.data);
+            const testStatus = update.Records[0].dynamodb.NewImage.Status.S;
+            const testName = update.Records[0].dynamodb.NewImage.runId.S;
+            console.log(testStatus);
+            console.log(testName);
 
-              // console.log((JSON.parse(update.Records[0])).dynamodb);
-              // console.log(JSON.parse((JSON.parse(update.Records[0])).dynamodb));
-              // console.log((JSON.parse((JSON.parse(update.Records[0])).dynamodb)).NewImage);
-              // console.log(JSON.parse((JSON.parse((JSON.parse(update.Records[0])).dynamodb)).NewImage));
-              // console.log((JSON.parse((JSON.parse((JSON.parse(update.Records[0])).dynamodb)).NewImage)).Status);
-              // console.log(JSON.parse((JSON.parse((JSON.parse((JSON.parse(update.Records[0])).dynamodb)).NewImage)).Status));
-              // console.log((JSON.parse((JSON.parse((JSON.parse((JSON.parse(update.Records[0])).dynamodb)).NewImage)).Status)).S);
-              
+            const color =
+              testStatus === "SUCCESS"
+                ? "green"
+                : testStatus === "FAILURE"
+                ? "red"
+                : "grey";
 
+            let li = document.getElementById(testName);
+            const content = `✔ ${testName} → <span style="color: ${color}">${testStatus}</span>`;
 
-              const li = document.createElement('li');
-              if (testStatus == 'SUCCESS'){
-                li.textContent = `✔ ${testName} → ${testStatus}`;
-              }
-              else if (testStatus == 'PENDING') {
-                li.textContent = `⏳ ${testName} → ${testStatus}`;
-              }
-              else if (testStatus == 'FAILURE') {
-                li.textContent = `❌ ${testName} → ${testStatus}`;
-              }
+            if (li) {
+              li.innerHTML = content;
+            } else {
+              li = document.createElement("li");
+              li.id = testName;
+              li.innerHTML = content;
               updateList.appendChild(li);
+            }
 
-              // ✅ Only count unique test names
-              if (!seenTests.has(update.testName)) {
-                seenTests.add(update.testName);
-                completed = seenTests.size;
-                statusText.textContent = `🟢 ${completed}/${total} tests acknowledged`;
-              }
+            // ✅ Only count unique test names
+            if (!seenTests.has()) {
+              seenTests.add(testName);
+              completed = seenTests.size;
+              statusText.textContent = `🟢 ${completed}/${total} tests acknowledged`;
+            }
 
-              // ✅ All selected tests have reported in
-              if (completed >= total) {
-                statusText.textContent = `✅ All ${total} tests complete`;
-                spinner.remove();
-                eventSource.close();
-              }
-            };
+            // // ✅ All selected tests have reported in
+            // if (completed >= total) {
+            //   statusText.textContent = `✅ All ${total} tests complete`;
+            //   spinner.remove();
+            //   eventSource.close();
+            // }
+          };
 
-
-            // ❌ Handle errors
-            eventSource.onerror = (err) => {
-              console.error('SSE error:', err);
-              statusText.textContent = '❌ Subscription failed';
-              spinner.style.backgroundColor = '#cb2431';
-              setTimeout(() => spinner.remove(), 3000);
-              eventSource.close();
-            };
+          // ❌ Handle errors
+          eventSource.onerror = (err) => {
+            console.error("SSE error:", err);
+            statusText.textContent = "❌ Subscription failed";
+            spinner.style.backgroundColor = "#cb2431";
+            setTimeout(() => spinner.remove(), 3000);
+            eventSource.close();
+          };
 
           // // Recursively poll status from backend
           // function pollUpdates() {
@@ -255,29 +257,29 @@ waitForMergeFooter((footer) => {
 
           // pollUpdates(); // Start polling
         })
-        .catch(error => {
+        .catch((error) => {
           // If /run fails
-          console.error('Error triggering run:', error);
-          spinner.textContent = '❌ Error triggering tests!';
-          spinner.style.backgroundColor = '#cb2431';
+          console.error("Error triggering run:", error);
+          spinner.textContent = "❌ Error triggering tests!";
+          spinner.style.backgroundColor = "#cb2431";
           setTimeout(() => spinner.remove(), 3000);
         });
     });
 
     // Layout row for submit and cancel buttons
-    const buttonRow = document.createElement('div');
-    buttonRow.style.display = 'flex';
-    buttonRow.style.justifyContent = 'space-between';
-    buttonRow.style.marginTop = '20px';
+    const buttonRow = document.createElement("div");
+    buttonRow.style.display = "flex";
+    buttonRow.style.justifyContent = "space-between";
+    buttonRow.style.marginTop = "20px";
     buttonRow.appendChild(submitBtn);
     buttonRow.appendChild(cancelBtn);
 
     // Add all UI components to modal
     modal.appendChild(title);
-    modal.appendChild(document.createElement('hr'));
+    modal.appendChild(document.createElement("hr"));
     modal.appendChild(searchInput);
     modal.appendChild(form);
-    modal.appendChild(document.createElement('hr'));
+    modal.appendChild(document.createElement("hr"));
     modal.appendChild(buttonRow);
 
     // Attach modal to overlay and overlay to document
@@ -289,7 +291,7 @@ waitForMergeFooter((footer) => {
   footer.appendChild(button);
 
   // Inject styling for modal and buttons
-  const style = document.createElement('style');
+  const style = document.createElement("style");
   style.textContent = `
     #popup-overlay {
       position: fixed;
