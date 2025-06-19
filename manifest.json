@@ -12,7 +12,9 @@
       "run_at": "document_idle"
     }
   ],
-
+  "icons": {
+    "48": "sl_logo.png"
+  },
   "host_permissions": [
     "https://bryans-mac-mini.taila3b14e.ts.net/*"
   ]

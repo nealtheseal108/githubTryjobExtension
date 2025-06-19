@@ -184,7 +184,15 @@ waitForMergeFooter((footer) => {
 
 
               const li = document.createElement('li');
-              li.textContent = `✔ ${testName} → ${testStatus}`;
+              if (testStatus == 'SUCCESS'){
+                li.textContent = `✔ ${testName} → ${testStatus}`;
+              }
+              else if (testStatus == 'PENDING') {
+                li.textContent = `⏳ ${testName} → ${testStatus}`;
+              }
+              else if (testStatus == 'FAILURE') {
+                li.textContent = `❌ ${testName} → ${testStatus}`;
+              }
               updateList.appendChild(li);
 
               // ✅ Only count unique test names
@@ -201,12 +209,6 @@ waitForMergeFooter((footer) => {
                 eventSource.close();
               }
             };
-
-            if (completed >= total) {
-              statusText.textContent = `✅ All ${total} tests complete`;
-              spinner.remove();
-              eventSource.close(); // Stop receiving messages
-            }
 
 
             // ❌ Handle errors
