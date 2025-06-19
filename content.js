@@ -9,7 +9,7 @@ console.log("Running extension");
      const isDryRunning=false;
      // Assume tests is sorted by FAILURE, PENDING, SUCCESS
      
-     const tests = [
+     tests = [
        {
          "name":"SOMETESTNAMEF",
          "status":"FAILURE"
