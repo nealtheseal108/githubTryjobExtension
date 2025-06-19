@@ -135,30 +135,33 @@ waitForMergeFooter((footer) => {
 
           // ⏳ Polling loop for updates
           function pollUpdates() {
-            fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`)
-              .then(res => res.json())
-              .then(update => {
-                const li = document.createElement('li');
-                li.textContent = `✔ ${update.testName} → ${update.status}`;
-                updateList.appendChild(li);
+          fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`)
+            .then(res => {
+              if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
+              return res.json();
+            })
+            .then(update => {
+              const li = document.createElement('li');
+              li.textContent = `✔ ${update.testName} → ${update.status}`;
+              updateList.appendChild(li);
 
-                completed++;
-                statusText.textContent = `🟢 ${completed}/${total} tests complete`;
+              completed++;
+              statusText.textContent = `🟢 ${completed}/${total} tests complete`;
 
-                if (completed < total) {
-                  pollUpdates(); // Keep polling
-                } else {
-                  statusText.textContent = `✅ All ${total} tests complete`;
-                  spinner.remove(); // Remove spinner
-                }
-              })
-              .catch(err => {
-                console.error('Subscription error:', err);
-                statusText.textContent = '❌ Subscription failed';
-                spinner.style.backgroundColor = '#cb2431';
-                setTimeout(() => spinner.remove(), 3000);
-              });
-          }
+              if (completed < total) {
+                pollUpdates(); // Keep polling
+              } else {
+                statusText.textContent = `✅ All ${total} tests complete`;
+                spinner.remove();
+              }
+            })
+            .catch(err => {
+              console.error('Subscription error:', err);
+              statusText.textContent = '❌ Subscription failed';
+              spinner.style.backgroundColor = '#cb2431';
+              setTimeout(() => spinner.remove(), 3000);
+            });
+        }
 
           pollUpdates();
         })
