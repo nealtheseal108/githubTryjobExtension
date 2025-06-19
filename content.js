@@ -96,14 +96,16 @@ waitForMergeFooter((footer) => {
     submitBtn.type = 'button';
     submitBtn.addEventListener('click', () => {
       const urlParts = window.location.pathname.split('/');
-      const prNumber = urlParts.includes("pull") ? urlParts[urlParts.indexOf("pull") + 1] : "0";
-      const patchNumber = 1;
+      const prNumber = 37;
+      // urlParts.includes("pull") ? urlParts[urlPearts.indexOf("pull") + 1] : "0";
+      // const patchNumber = 1;
 
       const selected = Array.from(
         form.querySelectorAll('input[type="checkbox"]:checked')
       ).map(cb => cb.name);
 
-      const commitID = document.querySelector('clipboard-copy')?.getAttribute('value') || '';
+      const commitID = "548f60778f536aa8f5076558983df4e92545a396";
+      // document.querySelector('clipboard-copy')?.getAttribute('value') || '';
       const branch = 'main';
 
       console.log('▶️ Triggering run:', { commitID, prNumber, branch, selected });
@@ -126,31 +128,38 @@ waitForMergeFooter((footer) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ commitID, branch, prNumber, tests: selected }),
-      }).then(() => {
-        // Display spinner text
-        const statusText = document.createElement('p');
-        statusText.textContent = `🟡 Subscribed to updates for PR #${prNumber}`;
-        statusText.style.marginTop = '15px';
-        modal.appendChild(statusText);
+      })
+        .then(() => {
+          // Display spinner text
+          const statusText = document.createElement('p');
+          statusText.textContent = `🟡 Subscribed to updates for PR #${prNumber}`;
+          statusText.style.marginTop = '15px';
+          modal.appendChild(statusText);
 
-        const updateList = document.createElement('ul');
-        modal.appendChild(updateList);
+          const updateList = document.createElement('ul');
+          modal.appendChild(updateList);
 
-      // Subscribe to live updates (HARDCODED for now)
-      fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=548f60778f536aa8f5076558983df4e92545a396&prNumber=37`)
-        .then(res => res.json())
-        .then(update => {
-          const li = document.createElement('li');
-          li.textContent = `✔ ${update.testName} → ${update.status}`;
-          updateList.appendChild(li);
-          statusText.textContent = '✅ Test completed';
-        })
-        .catch(err => {
-          console.error('Subscription error:', err);
-          statusText.textContent = '❌ Failed to subscribe to updates';
+          // Subscribe to live updates (HARDCODED for now)
+          fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`)
+            .then(res => res.json())
+            .then(update => {
+              const li = document.createElement('li');
+              li.textContent = `✔ ${update.testName} → ${update.status}`;
+              updateList.appendChild(li);
+              statusText.textContent = '✅ Test completed';
+            })
+            .catch(err => {
+              console.error('Subscription error:', err);
+              statusText.textContent = '❌ Failed to subscribe to updates';
+            });
+        }) // Corrected closing for the first .then()
+        .catch(error => { // Add a catch for the initial /run fetch
+          console.error('Error triggering run:', error);
+          spinner.textContent = '❌ Error triggering tests!';
+          spinner.style.backgroundColor = '#cb2431'; // Red for error
+          setTimeout(() => spinner.remove(), 3000); // Remove after 3 seconds
         });
-    });
-
+    }); // Correctly closes submitBtn.addEventListener
 
     const buttonRow = document.createElement('div');
     buttonRow.style.display = 'flex';
