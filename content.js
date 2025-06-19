@@ -1,6 +1,7 @@
 // Log to console to confirm the extension is running
 console.log("Running extension");
 
+let tests = [];
 // Helper function to wait for the GitHub merge footer to load before injecting UI
 function waitForMergeFooter(callback) {
   const check = () => {
@@ -124,6 +125,62 @@ waitForMergeFooter((footer) => {
       const prNumber = "37";
       const commitID = "548f60778f536aa8f5076558983df4e92545a396";
       const branch = "Sailloft";
+
+      //TODO: make tests accessible outside function, count FAILURE/PENDING/SUCCESSES
+      //      track in a counter and through subscribe status, increment counter till greater
+      fetch(
+        `https://bryans-mac-mini.taila3b14e.ts.net/run-status?commitID=${commitID}&prNumber=${prNumber}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          const tests = data
+            .map((obj) => {
+              if (obj.FAILURE && obj.FAILURE > 0) {
+                return {
+                  name: obj.testName,
+                  status: "FAILURE",
+                };
+              }
+              if (obj.PENDING && obj.PENDING > 0) {
+                return {
+                  name: obj.testName,
+                  status: "PENDING",
+                };
+              }
+              if (obj.SUCCESS && obj.SUCCESS > 0) {
+                return {
+                  name: obj.testName,
+                  status: "SUCCESS",
+                };
+              } else {
+                return {
+                  testName: obj.testName,
+                  status: "PENDING",
+                };
+              }
+            })
+            .sort((a, b) => a.status - b.status);
+          console.log(data);
+          console.log("tests value:", tests);
+        });
+
+      const test_counts = {
+        PENDING: 0,
+        SUCCESS: 0,
+        FAILURE: 0,
+      };
+      for (t of tests) {
+        test_counts[t.status] += 1;
+      }
+
+      console.log(tests);
+      console.log(test_counts);
 
       console.log("▶️ Triggering run:", {
         commitID,
