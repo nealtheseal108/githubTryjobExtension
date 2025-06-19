@@ -116,7 +116,7 @@ waitForMergeFooter((footer) => {
 
       // Hardcoded PR number, commit ID, and branch (this should be dynamic ideally)
       const urlParts = window.location.pathname.split('/');
-      const prNumber = 37;
+      const prNumber = "37";
       const commitID = "548f60778f536aa8f5076558983df4e92545a396";
       const branch = 'Sailloft';
 
@@ -153,39 +153,66 @@ waitForMergeFooter((footer) => {
           const updateList = document.createElement('ul');
           modal.appendChild(updateList);
 
-          // Recursively poll status from backend
-          function pollUpdates() {
-            fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`)
-              .then(res => {
-                if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
-                return res.json();
-              })
-              .then(update => {
-                // Update UI with test result
-                const li = document.createElement('li');
-                li.textContent = `✔ ${update.testName} → ${update.status}`;
-                updateList.appendChild(li);
+          const eventSource = new EventSource(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`);
 
-                completed++;
-                statusText.textContent = `🟢 ${completed}/${total} tests complete`;
+          eventSource.onmessage = (event) => {
+            const update = JSON.parse(event.data);
+            const li = document.createElement('li');
+            li.textContent = `✔ ${update.testName} → ${update.status}`;
+            updateList.appendChild(li);
 
-                // Continue or finish polling
-                if (completed < total) {
-                  pollUpdates();
-                } else {
-                  statusText.textContent = `✅ All ${total} tests complete`;
-                  spinner.remove();
-                }
-              })
-              .catch(err => {
-                console.error('Subscription error:', err);
-                statusText.textContent = '❌ Subscription failed';
-                spinner.style.backgroundColor = '#cb2431';
-                setTimeout(() => spinner.remove(), 3000);
-              });
-          }
+            completed++;
+            statusText.textContent = `🟢 ${completed}/${total} tests complete`;
 
-          pollUpdates(); // Start polling
+            if (completed >= total) {
+              statusText.textContent = `✅ All ${total} tests complete`;
+              spinner.remove();
+              eventSource.close(); // Close the SSE connection
+            }
+          };
+
+          eventSource.onerror = (err) => {
+            console.error('SSE error:', err);
+            statusText.textContent = '❌ Subscription failed';
+            spinner.style.backgroundColor = '#cb2431';
+            setTimeout(() => spinner.remove(), 3000);
+            eventSource.close(); // Close the SSE connection on error
+          };
+
+          // // Recursively poll status from backend
+          // function pollUpdates() {
+
+          //   fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`)
+          //     .then(res => {
+          //       if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
+          //       return res.json();
+          //     })
+          //     .then(update => {
+          //       // Update UI with test result
+          //       const li = document.createElement('li');
+          //       li.textContent = `✔ ${update.testName} → ${update.status}`;
+          //       updateList.appendChild(li);
+
+          //       completed++;
+          //       statusText.textContent = `🟢 ${completed}/${total} tests complete`;
+
+          //       // Continue or finish polling
+          //       if (completed < total) {
+          //         pollUpdates();
+          //       } else {
+          //         statusText.textContent = `✅ All ${total} tests complete`;
+          //         spinner.remove();
+          //       }
+          //     })
+          //     .catch(err => {
+          //       console.error('Subscription error:', err);
+          //       statusText.textContent = '❌ Subscription failed';
+          //       spinner.style.backgroundColor = '#cb2431';
+          //       setTimeout(() => spinner.remove(), 3000);
+          //     });
+          // }
+
+          // pollUpdates(); // Start polling
         })
         .catch(error => {
           // If /run fails
