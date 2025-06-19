@@ -106,7 +106,7 @@ waitForMergeFooter((footer) => {
 
       const commitID = "548f60778f536aa8f5076558983df4e92545a396";
       // document.querySelector('clipboard-copy')?.getAttribute('value') || '';
-      const branch = 'main';
+      const branch = 'Sailloft';
 
       console.log('▶️ Triggering run:', { commitID, prNumber, branch, selected });
 
