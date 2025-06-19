@@ -1,28 +1,32 @@
+// Log to console to confirm the extension is running
 console.log("Running extension");
 
+// Helper function to wait for the GitHub merge footer to load before injecting UI
 function waitForMergeFooter(callback) {
   const check = () => {
+    // Targeting the PR footer element
     const footer = document.querySelector('.p-3.bgColor-muted.borderColor-muted.rounded-bottom-2');
     if (footer) {
-      callback(footer);
+      callback(footer); // Call your UI injection function
     } else {
-      requestAnimationFrame(check);
+      requestAnimationFrame(check); // Keep checking until it appears
     }
   };
   check();
 }
 
 waitForMergeFooter((footer) => {
+  // Prevent adding the button multiple times
   if (document.querySelector('#tryjobs')) return;
 
-  // Ensure footer is flex row for layout
+  // Style the footer so it can fit your custom button
   footer.style.display = 'flex';
   footer.style.flexWrap = 'wrap';
   footer.style.alignItems = 'center';
   footer.style.justifyContent = 'flex-start';
   footer.style.gap = '8px';
 
-  // Create Tryjobs button
+  // Create the green "Tryjobs" button
   const button = document.createElement('button');
   button.id = 'tryjobs';
   button.textContent = 'Tryjobs';
@@ -34,27 +38,33 @@ waitForMergeFooter((footer) => {
   button.style.padding = '5px 16px';
   button.style.cursor = 'pointer';
 
+  // Button click handler — opens modal
   button.addEventListener('click', () => {
-    // --- Create overlay and modal ---
+    // Create the dark overlay
     const overlay = document.createElement('div');
     overlay.id = 'popup-overlay';
 
+    // Create the white modal box
     const modal = document.createElement('div');
     modal.id = 'popup-modal';
 
+    // Modal title
     const title = document.createElement('h2');
     title.textContent = 'Choose Tryjobs';
 
+    // The form to hold checkboxes
     const form = document.createElement('form');
 
+    // Search box to filter tryjobs
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.placeholder = 'Filter tryjobs...';
     searchInput.style.marginBottom = '10px';
     searchInput.style.width = '100%';
 
-    const labelList = [];
+    const labelList = []; // Track labels for filtering
 
+    // Filter labels when user types
     searchInput.addEventListener('input', () => {
       const query = searchInput.value.toLowerCase();
       labelList.forEach(({ label, test }) => {
@@ -62,6 +72,7 @@ waitForMergeFooter((footer) => {
       });
     });
 
+    // Fetch available tryjob names from backend
     fetch('https://bryans-mac-mini.taila3b14e.ts.net/test-names')
       .then(response => {
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
@@ -69,6 +80,7 @@ waitForMergeFooter((footer) => {
       })
       .then(data => {
         data.forEach((test) => {
+          // Create checkbox for each test
           const label = document.createElement('label');
           label.style.display = 'block';
           const checkbox = document.createElement('input');
@@ -82,29 +94,35 @@ waitForMergeFooter((footer) => {
       })
       .catch(error => console.error('Fetch error:', error));
 
+    // Cancel button
     const cancelBtn = document.createElement('button');
     cancelBtn.id = 'cancel-popup';
     cancelBtn.textContent = 'Cancel';
     cancelBtn.type = 'button';
     cancelBtn.addEventListener('click', () => {
-      overlay.remove();
+      overlay.remove(); // Close the modal
     });
 
+    // Submit button
     const submitBtn = document.createElement('button');
     submitBtn.id = 'submit-popup';
     submitBtn.textContent = 'Submit';
     submitBtn.type = 'button';
     submitBtn.addEventListener('click', () => {
-      const urlParts = window.location.pathname.split('/');
-      const prNumber = 37;
+      // Extract test selections
       const selected = Array.from(
         form.querySelectorAll('input[type="checkbox"]:checked')
       ).map(cb => cb.name);
+
+      // Hardcoded PR number, commit ID, and branch (this should be dynamic ideally)
+      const urlParts = window.location.pathname.split('/');
+      const prNumber = 37;
       const commitID = "548f60778f536aa8f5076558983df4e92545a396";
       const branch = 'Sailloft';
 
       console.log('▶️ Triggering run:', { commitID, prNumber, branch, selected });
 
+      // Spinner while tests are running
       const spinner = document.createElement('div');
       spinner.textContent = '⏳ Running tests...';
       spinner.style.position = 'fixed';
@@ -117,12 +135,14 @@ waitForMergeFooter((footer) => {
       spinner.style.zIndex = 10000;
       document.body.appendChild(spinner);
 
+      // Trigger backend to run tests
       fetch('https://bryans-mac-mini.taila3b14e.ts.net/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ commitID, branch, prNumber, tests: selected }),
       })
         .then(() => {
+          // UI for tracking test status
           const statusText = document.createElement('p');
           let completed = 0;
           const total = selected.length;
@@ -133,39 +153,42 @@ waitForMergeFooter((footer) => {
           const updateList = document.createElement('ul');
           modal.appendChild(updateList);
 
-          // ⏳ Polling loop for updates
+          // Recursively poll status from backend
           function pollUpdates() {
-          fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`)
-            .then(res => {
-              if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
-              return res.json();
-            })
-            .then(update => {
-              const li = document.createElement('li');
-              li.textContent = `✔ ${update.testName} → ${update.status}`;
-              updateList.appendChild(li);
+            fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`)
+              .then(res => {
+                if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
+                return res.json();
+              })
+              .then(update => {
+                // Update UI with test result
+                const li = document.createElement('li');
+                li.textContent = `✔ ${update.testName} → ${update.status}`;
+                updateList.appendChild(li);
 
-              completed++;
-              statusText.textContent = `🟢 ${completed}/${total} tests complete`;
+                completed++;
+                statusText.textContent = `🟢 ${completed}/${total} tests complete`;
 
-              if (completed < total) {
-                pollUpdates(); // Keep polling
-              } else {
-                statusText.textContent = `✅ All ${total} tests complete`;
-                spinner.remove();
-              }
-            })
-            .catch(err => {
-              console.error('Subscription error:', err);
-              statusText.textContent = '❌ Subscription failed';
-              spinner.style.backgroundColor = '#cb2431';
-              setTimeout(() => spinner.remove(), 3000);
-            });
-        }
+                // Continue or finish polling
+                if (completed < total) {
+                  pollUpdates();
+                } else {
+                  statusText.textContent = `✅ All ${total} tests complete`;
+                  spinner.remove();
+                }
+              })
+              .catch(err => {
+                console.error('Subscription error:', err);
+                statusText.textContent = '❌ Subscription failed';
+                spinner.style.backgroundColor = '#cb2431';
+                setTimeout(() => spinner.remove(), 3000);
+              });
+          }
 
-          pollUpdates();
+          pollUpdates(); // Start polling
         })
         .catch(error => {
+          // If /run fails
           console.error('Error triggering run:', error);
           spinner.textContent = '❌ Error triggering tests!';
           spinner.style.backgroundColor = '#cb2431';
@@ -173,6 +196,7 @@ waitForMergeFooter((footer) => {
         });
     });
 
+    // Layout row for submit and cancel buttons
     const buttonRow = document.createElement('div');
     buttonRow.style.display = 'flex';
     buttonRow.style.justifyContent = 'space-between';
@@ -180,19 +204,23 @@ waitForMergeFooter((footer) => {
     buttonRow.appendChild(submitBtn);
     buttonRow.appendChild(cancelBtn);
 
+    // Add all UI components to modal
     modal.appendChild(title);
     modal.appendChild(document.createElement('hr'));
     modal.appendChild(searchInput);
     modal.appendChild(form);
     modal.appendChild(document.createElement('hr'));
     modal.appendChild(buttonRow);
+
+    // Attach modal to overlay and overlay to document
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
   });
 
+  // Add Tryjobs button to footer
   footer.appendChild(button);
 
-  // Inject CSS styles
+  // Inject styling for modal and buttons
   const style = document.createElement('style');
   style.textContent = `
     #popup-overlay {
@@ -241,4 +269,3 @@ waitForMergeFooter((footer) => {
   `;
   document.head.appendChild(style);
 });
-
