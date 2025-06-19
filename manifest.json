@@ -4,13 +4,15 @@
   "version": "1.0",
   "description": "Injects Tryjobs button into GitHub PR view",
   "permissions": ["scripting"],
+
   "content_scripts": [
-  {
-    "matches": ["https://github.com/*/*/pull/*"],
-    "js": ["content.js"],
-    "run_at": "document_idle"
-  }
-],
+    {
+      "matches": ["https://github.com/*/*/pull/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
   "host_permissions": [
     "https://bryans-mac-mini.taila3b14e.ts.net/*"
   ]
