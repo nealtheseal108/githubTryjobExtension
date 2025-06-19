@@ -143,6 +143,7 @@ waitForMergeFooter((footer) => {
       })
         .then(() => {
           // UI for tracking test status
+          // UI for tracking test status
           const statusText = document.createElement('p');
           let completed = 0;
           const total = selected.length;
@@ -153,31 +154,55 @@ waitForMergeFooter((footer) => {
           const updateList = document.createElement('ul');
           modal.appendChild(updateList);
 
+          // ✅ Instantiate EventSource (this line was missing)
           const eventSource = new EventSource(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`);
 
+          // 📥 Handle incoming messages
           eventSource.onmessage = (event) => {
             const update = JSON.parse(event.data);
-            console.log(update);
+
             const li = document.createElement('li');
             li.textContent = `✔ ${update.testName} → ${update.status}`;
             updateList.appendChild(li);
 
-            completed++;
-            statusText.textContent = `🟢 ${completed}/${total} tests complete`;
+            const seenTests = new Set(); // Add this ABOVE eventSource.onmessage
+
+            eventSource.onmessage = (event) => {
+              const update = JSON.parse(event.data);
+
+              const li = document.createElement('li');
+              li.textContent = `✔ ${update.testName} → ${update.status}`;
+              updateList.appendChild(li);
+
+              // ✅ Only count unique test names
+              if (!seenTests.has(update.testName)) {
+                seenTests.add(update.testName);
+                completed = seenTests.size;
+                statusText.textContent = `🟢 ${completed}/${total} tests acknowledged`;
+              }
+
+              // ✅ All selected tests have reported in
+              if (completed >= total) {
+                statusText.textContent = `✅ All ${total} tests complete`;
+                spinner.remove();
+                eventSource.close();
+              }
+            };
 
             if (completed >= total) {
               statusText.textContent = `✅ All ${total} tests complete`;
               spinner.remove();
-              eventSource.close(); // Close the SSE connection
+              eventSource.close(); // Stop receiving messages
             }
           };
 
+          // ❌ Handle errors
           eventSource.onerror = (err) => {
             console.error('SSE error:', err);
             statusText.textContent = '❌ Subscription failed';
             spinner.style.backgroundColor = '#cb2431';
             setTimeout(() => spinner.remove(), 3000);
-            eventSource.close(); // Close the SSE connection on error
+            eventSource.close();
           };
 
           // // Recursively poll status from backend
