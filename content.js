@@ -97,20 +97,14 @@ waitForMergeFooter((footer) => {
     submitBtn.addEventListener('click', () => {
       const urlParts = window.location.pathname.split('/');
       const prNumber = 37;
-      // urlParts.includes("pull") ? urlParts[urlPearts.indexOf("pull") + 1] : "0";
-      // const patchNumber = 1;
-
       const selected = Array.from(
         form.querySelectorAll('input[type="checkbox"]:checked')
       ).map(cb => cb.name);
-
       const commitID = "548f60778f536aa8f5076558983df4e92545a396";
-      // document.querySelector('clipboard-copy')?.getAttribute('value') || '';
       const branch = 'Sailloft';
 
       console.log('▶️ Triggering run:', { commitID, prNumber, branch, selected });
 
-      // --- Create and insert spinner ---
       const spinner = document.createElement('div');
       spinner.textContent = '⏳ Running tests...';
       spinner.style.position = 'fixed';
@@ -123,43 +117,58 @@ waitForMergeFooter((footer) => {
       spinner.style.zIndex = 10000;
       document.body.appendChild(spinner);
 
-      // Inside your submitBtn click handler after the POST request is sent:
       fetch('https://bryans-mac-mini.taila3b14e.ts.net/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ commitID, branch, prNumber, tests: selected }),
       })
         .then(() => {
-          // Display spinner text
           const statusText = document.createElement('p');
-          statusText.textContent = `🟡 Subscribed to updates for PR #${prNumber}`;
+          let completed = 0;
+          const total = selected.length;
+          statusText.textContent = `🟡 Subscribed... 0/${total} complete`;
           statusText.style.marginTop = '15px';
           modal.appendChild(statusText);
 
           const updateList = document.createElement('ul');
           modal.appendChild(updateList);
 
-          // Subscribe to live updates (HARDCODED for now)
-          fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`)
-            .then(res => res.json())
-            .then(update => {
-              const li = document.createElement('li');
-              li.textContent = `✔ ${update.testName} → ${update.status}`;
-              updateList.appendChild(li);
-              statusText.textContent = '✅ Test completed';
-            })
-            .catch(err => {
-              console.error('Subscription error:', err);
-              statusText.textContent = '❌ Failed to subscribe to updates';
-            });
-        }) // Corrected closing for the first .then()
-        .catch(error => { // Add a catch for the initial /run fetch
+          // ⏳ Polling loop for updates
+          function pollUpdates() {
+            fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`)
+              .then(res => res.json())
+              .then(update => {
+                const li = document.createElement('li');
+                li.textContent = `✔ ${update.testName} → ${update.status}`;
+                updateList.appendChild(li);
+
+                completed++;
+                statusText.textContent = `🟢 ${completed}/${total} tests complete`;
+
+                if (completed < total) {
+                  pollUpdates(); // Keep polling
+                } else {
+                  statusText.textContent = `✅ All ${total} tests complete`;
+                  spinner.remove(); // Remove spinner
+                }
+              })
+              .catch(err => {
+                console.error('Subscription error:', err);
+                statusText.textContent = '❌ Subscription failed';
+                spinner.style.backgroundColor = '#cb2431';
+                setTimeout(() => spinner.remove(), 3000);
+              });
+          }
+
+          pollUpdates();
+        })
+        .catch(error => {
           console.error('Error triggering run:', error);
           spinner.textContent = '❌ Error triggering tests!';
-          spinner.style.backgroundColor = '#cb2431'; // Red for error
-          setTimeout(() => spinner.remove(), 3000); // Remove after 3 seconds
+          spinner.style.backgroundColor = '#cb2431';
+          setTimeout(() => spinner.remove(), 3000);
         });
-    }); // Correctly closes submitBtn.addEventListener
+    });
 
     const buttonRow = document.createElement('div');
     buttonRow.style.display = 'flex';
@@ -229,3 +238,4 @@ waitForMergeFooter((footer) => {
   `;
   document.head.appendChild(style);
 });
+
