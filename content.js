@@ -121,47 +121,34 @@ waitForMergeFooter((footer) => {
       spinner.style.zIndex = 10000;
       document.body.appendChild(spinner);
 
+      // Inside your submitBtn click handler after the POST request is sent:
       fetch('https://bryans-mac-mini.taila3b14e.ts.net/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ commitID, branch, prNumber, tests: selected }),
-      }).then(res => {
-        if (!res.ok) throw new Error(`Run API failed: ${res.status}`);
+      }).then(() => {
+        // Display spinner text
+        const statusText = document.createElement('p');
+        statusText.textContent = `🟡 Subscribed to updates for PR #${prNumber}`;
+        statusText.style.marginTop = '15px';
+        modal.appendChild(statusText);
 
-        // --- Start polling run-status ---
-        let pollInterval = setInterval(() => {
-          fetch(`https://bryans-mac-mini.taila3b14e.ts.net/run-status?changeNumber=${prNumber}&patchNumber=${patchNumber}`)
-            .then(res => res.json())
-            .then(results => {
-              console.log("🔁 Fetched run status:", results);
+        const updateList = document.createElement('ul');
+        modal.appendChild(updateList);
 
-              if (!Array.isArray(results) || results.length === 0) return;
-
-              const done = results.filter(r => r.status === 'PASSED' || r.status === 'FAILED');
-              const passed = results.filter(r => r.status === 'PASSED').length;
-
-              spinner.textContent = `🧪 ${done.length}/${selected.length} completed...`;
-
-              if (done.length === selected.length) {
-                clearInterval(pollInterval);
-                spinner.remove();
-                alert(`✅ ${passed}/${selected.length} tests passed`);
-              }
-            })
-            .catch(err => {
-              console.error("Polling error:", err);
-              clearInterval(pollInterval);
-              spinner.remove();
-              alert("❌ Failed to fetch run status.");
-            });
-        }, 2000);
-      }).catch(err => {
-        console.error("POST error:", err);
-        spinner.remove();
-        alert("❌ Failed to trigger tests.");
-      });
-
-      overlay.remove();
+      // Subscribe to live updates (HARDCODED for now)
+      fetch(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=548f60778f536aa8f5076558983df4e92545a396&prNumber=37`)
+        .then(res => res.json())
+        .then(update => {
+          const li = document.createElement('li');
+          li.textContent = `✔ ${update.testName} → ${update.status}`;
+          updateList.appendChild(li);
+          statusText.textContent = '✅ Test completed';
+        })
+        .catch(err => {
+          console.error('Subscription error:', err);
+          statusText.textContent = '❌ Failed to subscribe to updates';
+        });
     });
 
 
