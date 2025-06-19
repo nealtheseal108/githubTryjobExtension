@@ -96,11 +96,17 @@ waitForMergeFooter((footer) => {
     submitBtn.type = 'button';
     submitBtn.addEventListener('click', () => {
       const urlParts = window.location.pathname.split('/');
-      const changeNumber = urlParts.includes("pull") ? urlParts[urlParts.indexOf("pull") + 1] : "0";
-      const selected = Array.from(form.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.name);
+      const prNumber = urlParts.includes("pull") ? urlParts[urlParts.indexOf("pull") + 1] : "0";
+
+      const selected = Array.from(
+        form.querySelectorAll('input[type="checkbox"]:checked')
+      ).map(cb => cb.name);
+
       const commitID = document.querySelector('clipboard-copy')?.getAttribute('value') || '';
-      const branch = 'main';
-      const prNumber = changeNumber;
+      const branchElement = document.querySelector('[data-testid="base-branch-select-menu"] summary');
+      const branch = branchElement?.textContent?.trim() || 'main';
+
+      console.log('POSTING TRYJOBS:', { commitID, prNumber, branch, selected });
 
       fetch('https://bryans-mac-mini.taila3b14e.ts.net/run', {
         method: 'POST',
@@ -113,6 +119,12 @@ waitForMergeFooter((footer) => {
           prNumber: prNumber,
           tests: selected
         }),
+      }).then(res => {
+        if (!res.ok) throw new Error(`Run API failed: ${res.status}`);
+        alert("✅ Tests triggered successfully.");
+      }).catch(err => {
+        console.error(err);
+        alert("❌ Failed to trigger tests.");
       });
 
       overlay.remove();
