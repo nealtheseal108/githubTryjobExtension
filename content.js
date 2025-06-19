@@ -86,6 +86,7 @@ waitForMergeFooter((footer) => {
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
           checkbox.name = test;
+          checkbox.class = 'testBoxes';
           label.appendChild(checkbox);
           label.append(` ${test}`);
           form.appendChild(label);
@@ -103,6 +104,7 @@ waitForMergeFooter((footer) => {
       overlay.remove(); // Close the modal
     });
 
+
     // Submit button
     const submitBtn = document.createElement('button');
     submitBtn.id = 'submit-popup';
@@ -113,6 +115,7 @@ waitForMergeFooter((footer) => {
       const selected = Array.from(
         form.querySelectorAll('input[type="checkbox"]:checked')
       ).map(cb => cb.name);
+
 
       // Hardcoded PR number, commit ID, and branch (this should be dynamic ideally)
       const urlParts = window.location.pathname.split('/');
@@ -158,20 +161,30 @@ waitForMergeFooter((footer) => {
           const eventSource = new EventSource(`https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`);
 
           // 📥 Handle incoming messages
-          eventSource.onmessage = (event) => {
-            const update = JSON.parse(event.data);
-
-            const li = document.createElement('li');
-            li.textContent = `✔ ${update.testName} → ${update.status}`;
-            updateList.appendChild(li);
 
             const seenTests = new Set(); // Add this ABOVE eventSource.onmessage
 
             eventSource.onmessage = (event) => {
+              console.log(event);
               const update = JSON.parse(event.data);
+              console.log(update);
+              console.log(update.Records[0]);
+              console.log((update.Records[0]).dynamodb.NewImage.Status.S);
+              const testStatus = (update.Records[0]).dynamodb.NewImage.Status.S;
+              const testName = (update.Records[0]).dynamodb.NewImage.runId.S;
+
+              // console.log((JSON.parse(update.Records[0])).dynamodb);
+              // console.log(JSON.parse((JSON.parse(update.Records[0])).dynamodb));
+              // console.log((JSON.parse((JSON.parse(update.Records[0])).dynamodb)).NewImage);
+              // console.log(JSON.parse((JSON.parse((JSON.parse(update.Records[0])).dynamodb)).NewImage));
+              // console.log((JSON.parse((JSON.parse((JSON.parse(update.Records[0])).dynamodb)).NewImage)).Status);
+              // console.log(JSON.parse((JSON.parse((JSON.parse((JSON.parse(update.Records[0])).dynamodb)).NewImage)).Status));
+              // console.log((JSON.parse((JSON.parse((JSON.parse((JSON.parse(update.Records[0])).dynamodb)).NewImage)).Status)).S);
+              
+
 
               const li = document.createElement('li');
-              li.textContent = `✔ ${update.testName} → ${update.status}`;
+              li.textContent = `✔ ${testName} → ${testStatus}`;
               updateList.appendChild(li);
 
               // ✅ Only count unique test names
@@ -194,16 +207,16 @@ waitForMergeFooter((footer) => {
               spinner.remove();
               eventSource.close(); // Stop receiving messages
             }
-          };
 
-          // ❌ Handle errors
-          eventSource.onerror = (err) => {
-            console.error('SSE error:', err);
-            statusText.textContent = '❌ Subscription failed';
-            spinner.style.backgroundColor = '#cb2431';
-            setTimeout(() => spinner.remove(), 3000);
-            eventSource.close();
-          };
+
+            // ❌ Handle errors
+            eventSource.onerror = (err) => {
+              console.error('SSE error:', err);
+              statusText.textContent = '❌ Subscription failed';
+              spinner.style.backgroundColor = '#cb2431';
+              setTimeout(() => spinner.remove(), 3000);
+              eventSource.close();
+            };
 
           // // Recursively poll status from backend
           // function pollUpdates() {
