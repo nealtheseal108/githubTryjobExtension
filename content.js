@@ -1,7 +1,6 @@
 // Log to console to confirm the extension is running
 console.log("Running extension");
 
-let tests = [];
 // Helper function to wait for the GitHub merge footer to load before injecting UI
 function waitForMergeFooter(callback) {
   const check = () => {
@@ -17,6 +16,7 @@ function waitForMergeFooter(callback) {
   };
   check();
 }
+
 
 waitForMergeFooter((footer) => {
   // Prevent adding the button multiple times
@@ -128,7 +128,11 @@ waitForMergeFooter((footer) => {
 
       //TODO: make tests accessible outside function, count FAILURE/PENDING/SUCCESSES
       //      track in a counter and through subscribe status, increment counter till greater
-      fetch(
+      const test_counts = {};
+      let total_tests = 0;
+      
+      async function fetchTestData() {
+      const response = await fetch(
         `https://bryans-mac-mini.taila3b14e.ts.net/run-status?commitID=${commitID}&prNumber=${prNumber}`,
         {
           method: "GET",
@@ -137,47 +141,14 @@ waitForMergeFooter((footer) => {
           },
         }
       )
-        .then((response) => response.json())
-        .then((data) => {
-          const tests = data
-            .map((obj) => {
-              if (obj.FAILURE && obj.FAILURE > 0) {
-                return {
-                  name: obj.testName,
-                  status: "FAILURE",
-                };
-              }
-              if (obj.PENDING && obj.PENDING > 0) {
-                return {
-                  name: obj.testName,
-                  status: "PENDING",
-                };
-              }
-              if (obj.SUCCESS && obj.SUCCESS > 0) {
-                return {
-                  name: obj.testName,
-                  status: "SUCCESS",
-                };
-              } else {
-                return {
-                  testName: obj.testName,
-                  status: "PENDING",
-                };
-              }
-            })
-            .sort((a, b) => a.status - b.status);
-          console.log(data);
-          console.log("tests value:", tests);
-        });
-
-      const test_counts = {
-        PENDING: 0,
-        SUCCESS: 0,
-        FAILURE: 0,
-      };
-      for (t of tests) {
-        test_counts[t.status] += 1;
+      if (!response.ok) {
+        throw new Error('HTTP error - status ')
       }
+      const data = await response.json();
+      return data;
+      };
+
+      tests = fetchTestData();
 
       console.log(tests);
       console.log(test_counts);
@@ -188,6 +159,36 @@ waitForMergeFooter((footer) => {
         branch,
         selected,
       });
+
+
+      const detailed_area = document.createElement("div");
+      let counter = 0
+        for (const test of tests) {
+          const item = document.createElement("div");
+          item.style.cursor = "pointer"
+          item.className = "oval-div"
+          if (counter > 1) {
+            item.textContent = `+ ${tests.length - counter} more ↗`;
+            detailed_area.append(item);
+            // Should redirect to more detailed page on the sailloft ip
+            // item.addEventListener('click', () => {
+            //   window.open('https://example.com', '_blank');
+            // })
+            break;
+          }
+          item.textContent = `${test.name} ↗`;
+          if (test.status == "PENDING") {
+            item.classList.add("pending-div");
+          }
+          else if (test.status == "SUCCESS") {
+            item.classList.add("success-div");
+          }
+          else if (test.status == "FAILURE") {
+            item.classList.add("failure-div");
+          }
+          detailed_area.append(item);
+          counter += 1
+        }
 
       // Spinner while tests are running
       const spinner = document.createElement("div");
@@ -224,15 +225,13 @@ waitForMergeFooter((footer) => {
             `https://bryans-mac-mini.taila3b14e.ts.net/subscribe_status_update?commitID=${commitID}&prNumber=${prNumber}`
           );
 
-          // 📥 Handle incoming messages
-
-          const seenTests = new Set(); // Add this ABOVE eventSource.onmessage
 
           eventSource.onmessage = (event) => {
             console.log(selected);
             const update = JSON.parse(event.data);
             const testStatus = update.Records[0].dynamodb.NewImage.Status.S;
             const testName = update.Records[0].dynamodb.NewImage.runId.S;
+            console.log(tests.PromiseResu);
             console.log(testStatus);
             console.log(testName);
 
@@ -243,6 +242,7 @@ waitForMergeFooter((footer) => {
                 ? "red"
                 : "grey";
 
+            completed++;
             let li = document.getElementById(testName);
             const content = `✔ ${testName} → <span style="color: ${color}">${testStatus}</span>`;
 
@@ -255,19 +255,12 @@ waitForMergeFooter((footer) => {
               updateList.appendChild(li);
             }
 
-            // ✅ Only count unique test names
-            if (!seenTests.has()) {
-              seenTests.add(testName);
-              completed = seenTests.size;
-              statusText.textContent = `🟢 ${completed}/${total} tests acknowledged`;
-            }
 
-            // // ✅ All selected tests have reported in
-            // if (completed >= total) {
-            //   statusText.textContent = `✅ All ${total} tests complete`;
-            //   spinner.remove();
-            //   eventSource.close();
-            // }
+            // ✅ All selected tests have reported in
+            if (completed >= tests.length) {
+              statusText.textContent = `✅ All ${tests.length} tests complete`;
+              spinner.remove();
+            }
           };
 
           // ❌ Handle errors
@@ -348,51 +341,188 @@ waitForMergeFooter((footer) => {
   footer.appendChild(button);
 
   // Inject styling for modal and buttons
+// ...existing code...
+  // Inject styling for modal and buttons
   const style = document.createElement("style");
   style.textContent = `
     #popup-overlay {
       position: fixed;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(0, 0, 0, 0.35);
       display: flex;
       justify-content: center;
       align-items: center;
       z-index: 9999;
+      font-family: 'Segoe UI', Arial, sans-serif;
     }
     #popup-modal {
-      background-color: #ffffff;
-      padding: 20px;
-      border-radius: 8px;
-      width: 300px;
-      position: relative;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-      font-family: sans-serif;
+      background-color: #fff;
+      padding: 32px 28px 24px 28px;
+      border-radius: 14px;
+      width: 370px;
+      max-width: 95vw;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 1.5px 6px rgba(0,0,0,0.10);
       color: #24292f;
+      position: relative;
+      animation: popup-fadein 0.18s;
+    }
+    @keyframes popup-fadein {
+      from { transform: scale(0.97) translateY(20px); opacity: 0; }
+      to   { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    #popup-modal h2 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    #popup-modal hr {
+      margin: 16px 0 18px 0;
+      border: none;
+      border-top: 1px solid #e1e4e8;
+    }
+    #popup-modal input[type="text"] {
+      padding: 8px 12px 8px 32px;
+      border: 1px solid #d1d5da;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-bottom: 12px;
+      background: #f6f8fa url('data:image/svg+xml;utf8,<svg fill="gray" height="16" viewBox="0 0 16 16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M11.742 10.344a6.471 6.471 0 001.397-4.1A6.5 6.5 0 105.5 12c1.61 0 3.09-.59 4.1-1.397l3.85 3.85a1 1 0 001.415-1.415l-3.85-3.85zM7.5 12a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"></path></svg>') no-repeat 8px center;
+      box-sizing: border-box;
+      outline: none;
+      transition: border 0.2s;
+    }
+    #popup-modal input[type="text"]:focus {
+      border: 1.5px solid #3272c1;
+      background-color: #fff;
+    }
+    #popup-modal form {
+      max-height: 180px;
+      overflow-y: auto;
+      margin-bottom: 8px;
+      padding-right: 4px;
+    }
+    #popup-modal label {
+      display: flex;
+      align-items: center;
+      padding: 6px 0 6px 2px;
+      border-radius: 5px;
+      transition: background 0.12s;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    #popup-modal label:hover {
+      background: #f0f6fb;
+    }
+    #popup-modal input[type="checkbox"] {
+      accent-color: #3272c1;
+      margin-right: 10px;
+      width: 16px;
+      height: 16px;
+    }
+    #popup-modal .testBoxes {
+      margin-right: 10px;
+    }
+    #popup-modal .oval-div {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.95em;
+      margin: 2px 4px 2px 0;
+      background: #f6f8fa;
+      border: 1px solid #e1e4e8;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #popup-modal .oval-div:hover {
+      background: #eaf5ff;
+    }
+    #popup-modal .pending-div {
+      background: #fffbe6;
+      border-color: #ffe066;
+      color: #b38600;
+    }
+    #popup-modal .success-div {
+      background: #e6ffed;
+      border-color: #34d058;
+      color: #22863a;
+    }
+    #popup-modal .failure-div {
+      background: #ffeef0;
+      border-color: #f97583;
+      color: #cb2431;
+    }
+    #popup-modal ul {
+      padding-left: 18px;
+      margin: 10px 0 0 0;
+      max-height: 110px;
+      overflow-y: auto;
+    }
+    #popup-modal ul li {
+      margin-bottom: 6px;
+      font-size: 1em;
+      line-height: 1.4;
+    }
+    #popup-modal ul li span {
+      display: inline-block;
+      min-width: 68px;
+      font-weight: 600;
+      border-radius: 8px;
+      padding: 2px 8px;
+      margin-left: 8px;
+    }
+    #popup-modal ul li span[style*="green"] {
+      background: #e6ffed;
+      color: #22863a;
+    }
+    #popup-modal ul li span[style*="red"] {
+      background: #ffeef0;
+      color: #cb2431;
+    }
+    #popup-modal ul li span[style*="grey"] {
+      background: #f6f8fa;
+      color: #6a737d;
+    }
+    #popup-modal .button-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 22px;
     }
     #submit-popup, #cancel-popup {
-      padding: 6px 12px;
-      background-color: #ccc;
+      padding: 7px 18px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 500;
       cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+      box-shadow: 0 1px 2px rgba(50,114,193,0.04);
     }
     #submit-popup {
       background-color: #3272c1;
-      color: white;
+      color: #fff;
     }
     #submit-popup:hover {
       background-color: #255794;
     }
+    #cancel-popup {
+      background-color: #f6f8fa;
+      color: #24292f;
+      border: 1px solid #e1e4e8;
+    }
     #cancel-popup:hover {
-      background-color: #bbb;
+      background-color: #e1e4e8;
     }
-    #popup-modal h2 {
-      margin-top: 0;
-    }
-    hr {
-      margin: 10px 0px;
+    @media (max-width: 500px) {
+      #popup-modal {
+        width: 98vw;
+        padding: 16px 4vw 12px 4vw;
+      }
     }
   `;
   document.head.appendChild(style);
+// ...existing code...
 });
